@@ -7,7 +7,11 @@
 		{
 			"Name": "A1",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"UMG",
+				"Engine"
+			]
 		}
 	],
 	"Plugins": [
@@ -69,6 +73,10 @@
 				"Win64",
 				"Android"
 			]
+		},
+		{
+			"Name": "ModelingToolsEditorMode",
+			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [
