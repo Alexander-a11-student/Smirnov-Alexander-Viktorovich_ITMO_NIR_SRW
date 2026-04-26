@@ -16,14 +16,12 @@ AMyActor::AMyActor()
 void AMyActor::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame
 void AMyActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 //void AMyActor::OnCalculateMyFunction(){}
