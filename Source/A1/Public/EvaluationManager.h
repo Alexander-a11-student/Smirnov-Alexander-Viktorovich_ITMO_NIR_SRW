@@ -88,6 +88,15 @@ public:
     UPROPERTY(BlueprintReadOnly, Category = "Evaluation")
     float SafetyScore = 0.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Evaluation")
+    float PeakThreshold = 1000.0f;
+
+    // Счетчик зафиксированных пиков (ошибок)
+    int32 DetectedPeaksCount = 0;
+
+    // Массив временных меток, когда были пойманы пики (для детального отчета)
+    TArray<float> PeakTimestamps;
+
 private:
     void RecordSnapshot();
 

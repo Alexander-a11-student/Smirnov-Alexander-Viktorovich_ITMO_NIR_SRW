@@ -75,6 +75,9 @@ void UDoziLogicComponent::CalculateTotalDose()
     float EquivalentGamma = TotalGamma_DoseRate * 1.0f;
     float EquivalentNeutron = TotalNeutron_DoseRate * 10.0f;
 
+    // Флуктуация только гамма-канала
+    EquivalentGamma = ApplyDoseFluctuation(EquivalentGamma);
+
     CurrentDoseRate_Neutron = EquivalentNeutron;
     CurrentDoseRate_Total = EquivalentGamma + EquivalentNeutron;
 }
@@ -133,4 +136,32 @@ void UDoziLogicComponent::RecordMeasurement()
     {
         OnMeasurementTaken.Broadcast(NewEntry);
     }
+}
+
+float UDoziLogicComponent::ApplyDoseFluctuation(float DoseRate)
+{
+    float Alpha = 0.02f;
+
+    // Кусочная модель шума
+    if (DoseRate < 1.0f)
+    {
+        Alpha = 0.1f;
+    }
+    else if (DoseRate < 10.0f)
+    {
+        Alpha = 0.05f;
+    }
+    else
+    {
+        Alpha = 0.02f;
+    }
+
+    // Случайная величина ξ ∈ [-1; 1]
+    float Xi = FMath::FRandRange(-1.0f, 1.0f);
+
+    // H_meas = H_gamma * (1 + α * ξ)
+    float FluctuatedDose = DoseRate * (1.0f + Alpha * Xi);
+
+    // Защита от отрицательных значений
+    return FMath::Max(0.0f, FluctuatedDose);
 }

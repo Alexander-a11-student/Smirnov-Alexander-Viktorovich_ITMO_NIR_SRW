@@ -42,6 +42,17 @@ void UEvaluationManager::RecordSnapshot()
     Snapshot.CurrentDoseRate = TargetDosimeter->CurrentDoseRate_Total;
     Snapshot.AccumulatedTotalDose = TargetDosimeter->AccumulatedDose_IED;
 
+    // --- ЛОГИКА ОБНАРУЖЕНИЯ ПИКОВ (ОШИБОК) ---
+    // Если текущая доза выше порога, фиксируем это как "ошибку"
+    if (Snapshot.CurrentDoseRate >= PeakThreshold)
+    {
+        DetectedPeaksCount++;
+        PeakTimestamps.Add(Snapshot.Timestamp);
+
+        // Опционально: выводим в лог каждую ошибку в реальном времени
+        // UE_LOG(LogTemp, Error, TEXT("Evaluation: PEAK DETECTED at %.2f s! Value: %.2f"), Snapshot.Timestamp, Snapshot.CurrentDoseRate);
+    }
+
     CurrentRunData.Add(Snapshot);
 }
 
@@ -94,18 +105,28 @@ void UEvaluationManager::StopRunAndExport(FString FileNamePrefix)
     float FinalAccDose = TargetDosimeter->AccumulatedDose_IED;
     SafetyScore = CalculateSafetyIndicator(FinalAccDose);
 
-        UE_LOG(LogTemp, Warning,
-            TEXT("Evaluation Finished. Final Dose: %.4f, Safety Score: %.2f%%"),
-            FinalAccDose,
-            SafetyScore
-        );
+    // Получаем финальную оценку в виде строки (A, B, C, D, F)
+    FString FinalGradeStr = GetFinalGrade();
 
+    UE_LOG(LogTemp, Warning,
+        TEXT("Evaluation Finished. Grade: %s, Dose: %.4f, Peaks: %d"),
+        *FinalGradeStr,
+        FinalAccDose,
+        DetectedPeaksCount
+    );
+
+    // --- ГЕНЕРАЦИЯ CSV С РАСШИРЕННЫМ ОТЧЕТОМ ---
     FString CSVContent = FString::Printf(
-        TEXT("Scenario Evaluation\n")
-        TEXT("Limit Dose: %.2f, Final Dose: %.4f, Safety Score: %.2f%%\n\n"),
+        TEXT("Scenario Evaluation Report\n")
+        TEXT("Final Grade: %s\n") // Добавляем оценку
+        TEXT("Safety Score: %.2f%%\n")
+        TEXT("Limit Dose: %.2f, Final Dose: %.4f\n")
+        TEXT("Errors (High Dose Peaks): %d\n\n"), // Фиксируем количество пиков
+        *FinalGradeStr,
+        SafetyScore,
         DoseLimit,
         FinalAccDose,
-        SafetyScore
+        DetectedPeaksCount
     );
 
     CSVContent += TEXT("Time_s,LocX,LocY,LocZ,DoseRate_mkSv_h,AccumulatedDose_mkSv\n");
@@ -123,8 +144,8 @@ void UEvaluationManager::StopRunAndExport(FString FileNamePrefix)
         );
     }
 
+    // Сохранение (оставляем твою логику без изменений)
     FString Directory = FPaths::LaunchDir() / TEXT("Evaluations");
-
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 
     if (!PlatformFile.DirectoryExists(*Directory))
@@ -133,26 +154,22 @@ void UEvaluationManager::StopRunAndExport(FString FileNamePrefix)
     }
 
     FString TimestampStr = FDateTime::Now().ToString(TEXT("%Y%m%d_%H%M%S"));
-
-    FString FullPath = Directory / FString::Printf(TEXT("%s_%s.csv"), *FileNamePrefix, *TimestampStr);
+    FString FullPath = Directory / FString::Printf(TEXT("%s_Grade_%s_%s.csv"), *FileNamePrefix, *FinalGradeStr.Left(1), *TimestampStr);
 
     bool bSaved = FFileHelper::SaveStringToFile(CSVContent, *FullPath);
 
     if (bSaved)
     {
         UE_LOG(LogTemp, Warning, TEXT("CSV SUCCESSFULLY SAVED: %s"), *FullPath);
-
         FPlatformProcess::ExploreFolder(*Directory);
-    }
-    else
-    {
-        UE_LOG(LogTemp, Error, TEXT("FAILED TO SAVE CSV: %s"), *FullPath);
     }
 }
 
 void UEvaluationManager::ResetRun()
 {
     CurrentRunData.Empty();
+    PeakTimestamps.Empty(); // Очищаем историю пиков
+    DetectedPeaksCount = 0; // Сбрасываем счетчик ошибок
     SafetyScore = 0.0f;
     RunStartTime = 0.0f;
 
@@ -168,7 +185,7 @@ void UEvaluationManager::ResetRun()
         TargetDosimeter->CurrentDoseRate_Total = 0.0f;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("Evaluation: Manager and Dosimeter have been fully reset."));
+    UE_LOG(LogTemp, Log, TEXT("Evaluation: Manager fully reset."));
 }
 
 void UEvaluationManager::SpawnScenarioSources()
