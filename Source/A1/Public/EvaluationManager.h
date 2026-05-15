@@ -2,9 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "DrawDebugHelpers.h"
+
 #include "EvaluationManager.generated.h"
 
+
 // Предварительное объявление, чтобы не было ошибок циклической зависимости
+class APointSource;
 class UDoziLogicComponent;
 
 USTRUCT(BlueprintType)
@@ -33,12 +37,23 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Evaluation|Spawning")
     void SpawnScenarioSources();
 
+    UFUNCTION(BlueprintCallable, Category = "Evaluation|Spawning")
+    void SpawnNeutronInRandomBox();
+
+    // Функция для вызова из Blueprints или кода
+    UFUNCTION(BlueprintCallable, Category = "Evaluation|Pathfinding")
+    void VisualizeOptimalPath();
+
 protected:
     virtual void BeginPlay() override;
 
     // Класс точек спавна (твой SpawnSource_2)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Evaluation|Spawning")
     TSubclassOf<AActor> SpawnLocationClass;
+
+    // Класс точек спавна (твой SpawnSource_8)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Evaluation|Spawning")
+    TSubclassOf<AActor> ASpawnSource_8;
 
     // Класс нейтронного источника (BP_PointSource_2_scenario_1)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Evaluation|Spawning")
@@ -48,7 +63,24 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Evaluation|Spawning")
     TSubclassOf<AActor> StandardSourceClass;
 
+
+    //Поиск пути
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Evaluation|Pathfinding", meta = (AllowedClasses = "Actor"))
+    TSoftObjectPtr<AActor> InternalStartActor;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Evaluation|Pathfinding", meta = (AllowedClasses = "Actor"))
+    TSoftObjectPtr<AActor> InternalEndActor;
+
 public:
+    // Класс маркера, который будет спавниться на месте пика (назначь в Blueprints!)
+    UPROPERTY(EditAnywhere, Category = "Evaluation|Peaks")
+    TSubclassOf<AActor> PeakMarkerClass;
+
+    // Интервал между спавном маркеров, чтобы не заспамить одну точку (в секундах)
+    UPROPERTY(EditAnywhere, Category = "Evaluation|Peaks")
+    float PeakRecordInterval = 5.0f;
+
+
     UFUNCTION(BlueprintCallable, Category = "Evaluation")
     void StartRun();
 
@@ -97,8 +129,29 @@ public:
     // Массив временных меток, когда были пойманы пики (для детального отчета)
     TArray<float> PeakTimestamps;
 
+    TArray<FVector> SafeZoneLocations;
+
 private:
+    void SimulateIdealRun();
+
+    // Время, проведенное в опасной зоне
+    float TimeInDangerZone = 0.0f;
+    
+    // Время последнего зафиксированного пика (для кулдауна в 5 сек)
+    float LastPeakRecordTime = -100.0f; 
+
+    // Массив координат, где были зафиксированы пики (для экспорта)
+    TArray<FVector> PeakLocations;
+
+
     void RecordSnapshot();
+
+    // Вспомогательная функция для расчета дозы в любой точке (без дозиметра)
+    float GetDoseRateAtLocation(FVector Location);
+
+    // Простая реализация сетки и поиска (A*)
+    TArray<FVector> PathfindSafeRoute(FVector Start, FVector End);
+
 
     UPROPERTY()
     UDoziLogicComponent* TargetDosimeter;
@@ -108,4 +161,7 @@ private:
 
     bool bIsRecording = false;
     float RunStartTime = 0.0f;
+
+    float IdealAccumulatedDose = 0.0f; // Результат симуляции
+    float SimulationSpeed = 600.0f;    // Скорость (WalkSpeed)
 };

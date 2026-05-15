@@ -55,8 +55,10 @@ public:
     // Функция для кнопки "Измерить"
     UFUNCTION(BlueprintCallable, Category = "Radiation Input")
     void RecordMeasurement();
+    float CalculateShieldingFactor(FVector Start, FVector End, AActor* SourceActor, ERadiationType Type);
 
 protected:
     void CalculateTotalDose();
-    float CalculateShieldingFactor(FVector Start, FVector End, AActor* SourceActor, ERadiationType Type);
+    float ApplyDoseFluctuation(float DoseRate);
+
 };

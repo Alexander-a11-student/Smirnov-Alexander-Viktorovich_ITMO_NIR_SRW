@@ -4,6 +4,7 @@
 #include "Engine/DataTable.h" // <<< ОЧЕНЬ ВАЖНО для DataTables
 #include "RadiationStructs.generated.h" // <<< Генерация кода Unreal
 
+
 // Тип излучения 
 UENUM(BlueprintType)
 enum class ERadiationType : uint8

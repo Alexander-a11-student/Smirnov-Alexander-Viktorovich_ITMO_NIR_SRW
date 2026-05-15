@@ -12,12 +12,12 @@ public class A1 : ModuleRules
             "CoreUObject",
             "Engine",
             "InputCore",
-            "UMG",        // <--- ÎÁßÇÀÒÅËÜÍÎ
-            "Slate",      // <--- íóæåí UMG
-            "SlateCore"   // <--- íóæåí UMG
+            "UMG",
+            "Slate",
+            "SlateCore",
+            "NavigationSystem" // <--- ÄÎÁÀÂÜ ÝÒÎ ÄËß ÎÁÕÎÄÀ ÑÒÅÍ
         });
 
         PrivateDependencyModuleNames.AddRange(new string[] { });
     }
 }
-
